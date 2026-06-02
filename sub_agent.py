@@ -50,7 +50,7 @@ competitors, and user pain points. Do NOT wait for the user to provide this -- \
 if they give you a product name or URL, immediately search for reviews, Reddit \
 discussions, analyst coverage, and competitor comparisons.
 
-Key information to gather:
+Key information to gather from the user prior to writing the scipt:
 - Target audience (role, seniority, industry)
 - Core problem the product solves and why it matters now
 - Top 3 capabilities to highlight (or let you identify them from context)

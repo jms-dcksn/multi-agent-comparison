@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessageChunk
 from uuid_utils import uuid7
 
-from handoff_agent import agent
+from sub_agent import agent
 
 
 def main():
