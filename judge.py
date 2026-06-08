@@ -33,10 +33,20 @@ class Verdict(BaseModel):
     rationale: str = Field(description="2-3 sentences justifying the two scores.")
 
 
-JUDGE_PROMPT = """You are an expert evaluator of B2B demo scripts used by enterprise \
-sales teams. You grade a single produced script on two independent axes.
+class WinnerVerdict(BaseModel):
+    winner: str = Field(
+        description="The id of the single best script, copied exactly from the "
+        "candidate header it appears under."
+    )
+    reasoning: str = Field(
+        description="3-5 sentences explaining why this script wins over the others, "
+        "citing concrete quality and Tell-Show-Tell structure differences."
+    )
 
-== overall (0-100) ==
+
+# Shared evaluation criteria — both the per-script judge and the comparative judge
+# grade on the same two axes so the winner pick is consistent with the scores.
+CRITERIA = """== quality (0-100) ==
 Writing quality and persuasive craft:
 - Audience calibration: tone matches the stated audience (executive vs. practitioner).
 - Narrative tension: a clear pain -> transformation arc, not a feature list.
@@ -50,11 +60,31 @@ Strict adherence to the Tell-Show-Tell specification. Penalize each deviation:
 - Limbic Opening hooks emotionally and does NOT name the product yet.
 - EXACTLY 3 Key Ideas -- not 2, not 4.
 - Each Key Idea follows TELL -> SHOW -> TELL, with [STAGE DIRECTION: ...] in the SHOW.
-- Approximate time markers on every section; second-person voice throughout.
+- Approximate time markers on every section; second-person voice throughout."""
+
+
+JUDGE_PROMPT = f"""You are an expert evaluator of B2B demo scripts used by enterprise \
+sales teams. You grade a single produced script on two independent axes.
+
+{CRITERIA}
 
 If the text is NOT a script (e.g. a clarifying question or research summary), set
 is_script=false and score both axes 0. Be a discerning, calibrated grader: reserve
 90+ for scripts that are genuinely presentation-ready."""
+
+
+WINNER_PROMPT = f"""You are the head judge of a demo-script competition. Several agents \
+each produced a script for the same task; you must choose the SINGLE best one.
+
+Use the same two axes your panel uses, weighing persuasive writing quality and strict
+Tell-Show-Tell structural adherence together:
+
+{CRITERIA}
+
+Compare the candidates head to head. Pick the one that is most presentation-ready
+overall. Return the winning candidate's id exactly as it appears in its header, and
+explain in 3-5 sentences why it beats the others -- cite specific quality and structure
+differences, not vague praise."""
 
 
 def judge_script(script_text: str) -> Verdict:
@@ -68,3 +98,31 @@ def judge_script(script_text: str) -> Verdict:
         output_format=Verdict,
     )
     return resp.parsed_output
+
+
+def pick_winner(scripts: dict[str, str]) -> WinnerVerdict | None:
+    """Compare candidate scripts and return the winning agent id + reasoning.
+
+    `scripts` maps agent id -> script text; entries without a script are skipped.
+    The returned `winner` is guaranteed to be one of the supplied ids.
+    """
+    candidates = {k: v for k, v in scripts.items() if v}
+    if not candidates:
+        return None
+
+    blocks = "\n\n".join(
+        f"=== CANDIDATE id={k} ===\n{text}" for k, text in candidates.items()
+    )
+    resp = client.messages.parse(
+        model="claude-opus-4-8",
+        max_tokens=4000,
+        thinking={"type": "adaptive"},
+        system=WINNER_PROMPT,
+        messages=[{"role": "user", "content": f"Candidate scripts:\n\n{blocks}"}],
+        output_format=WinnerVerdict,
+    )
+    verdict = resp.parsed_output
+    # Guard against a hallucinated id: fall back to the first candidate.
+    if verdict.winner not in candidates:
+        verdict.winner = next(iter(candidates))
+    return verdict

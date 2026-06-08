@@ -8,7 +8,7 @@ the user clicks "Analyze performance".
 import pandas as pd
 import streamlit as st
 
-from judge import judge_script
+from judge import judge_script, pick_winner
 from scoring import latest_script, build_scores, agent_cost, agent_latency
 
 AGENTS = [
@@ -30,17 +30,32 @@ if not history or not any(history.get(k) for k in KEYS):
 
 if st.button("Analyze performance", type="primary"):
     with st.spinner("Judging scripts…"):
-        verdicts = {}
-        for k in KEYS:
-            script = latest_script(history.get(k, []))
-            verdicts[k] = judge_script(script) if script else None
+        scripts = {k: latest_script(history.get(k, [])) for k in KEYS}
+        verdicts = {k: judge_script(s) if s else None for k, s in scripts.items()}
         st.session_state.verdicts = verdicts
+        st.session_state.winner = pick_winner(scripts)
 
 verdicts = st.session_state.get("verdicts")
 if not verdicts:
     st.stop()
 
 scores = build_scores({k: history.get(k, []) for k in KEYS}, verdicts)
+
+# Lead with the head judge's overall pick.
+winner = st.session_state.get("winner")
+if winner and winner.winner in TITLES:
+    st.subheader("Overall winner")
+    left, right = st.columns([1, 2])
+    with left:
+        st.success(f"**{TITLES[winner.winner]}**")
+        v = verdicts.get(winner.winner)
+        if v:
+            st.metric("Quality", v.overall)
+            st.metric("Structure", v.structure)
+    with right:
+        st.markdown("**Why this script wins**")
+        st.markdown(winner.reasoning)
+    st.divider()
 
 # Three bars per agent — st.bar_chart does grouped bars natively (stack=False).
 chart_df = pd.DataFrame(

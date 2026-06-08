@@ -7,11 +7,10 @@ are normalized so the best agent scores 100 (inverse ratio, not min-max).
 
 from __future__ import annotations
 
-# $ per 1M tokens, per model. Sonnet pricing is current; confirm the OpenAI numbers
-# for your actual gpt-5.4-mini contract.
+# $ per 1M tokens, per model. Both rates confirmed.
 PRICING = {
     "claude-sonnet-4-6": {"in": 3.00, "out": 15.00},
-    "gpt-5.4-mini": {"in": 0.25, "out": 2.00},  # TODO: confirm real prices
+    "gpt-5.4-mini": {"in": 0.75, "out": 4.50},
 }
 
 # A produced script contains these spec-defined section headers; a clarifying
