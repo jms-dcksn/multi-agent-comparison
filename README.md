@@ -5,8 +5,8 @@ solving the same task: an interactive **demo-script writer** that researches a
 product (Tavily web search) and produces a Tell-Show-Tell presentation script.
 
 A Streamlit app runs all three side by side over independent conversations, then
-an LLM judge scores their output so you can compare them on speed, cost, and
-quality.
+a two-layer LLM judge scores each output and picks a winner so you can compare
+them on speed, cost, and quality.
 
 ## The three architectures
 
@@ -29,10 +29,20 @@ LangChain `.stream(...)` interface, so they're interchangeable.
 - **Latency** and **token cost** — captured live per message (including the
   sub-agent's hidden Claude writer, via a usage-metadata callback) and
   price-weighted into dollars across providers (`scoring.py`).
-- **Output quality** — an online LLM judge (Claude Opus) scores each finished
-  script on overall quality and Tell-Show-Tell structure adherence, then a
-  head-judge pass picks an overall winner (`judge.py`). Using Opus keeps the
-  judge independent of the GPT manager and Claude writer it grades.
+- **Output quality** — two judge layers (`judge.py`), both Claude Opus, both
+  grading against the same shared criteria (writing quality + Tell-Show-Tell
+  structure):
+  1. **Per-script scoring** — each finished script is judged in isolation and
+     given 0-100 scores on overall quality and structure adherence, with a
+     rationale.
+  2. **Comparative winner pick** — a head-judge pass sees all candidate scripts
+     side by side and picks the single strongest. This is a pairwise-style
+     evaluation: rather than trusting absolute scores (which drift between
+     calls), it compares the outputs directly against each other on the same
+     criteria, which is more reliable for ranking.
+
+  Using Opus keeps both layers independent of the GPT manager and Claude writer
+  they grade.
 - **Ease of evaluation** — how observable and instrumentable each architecture is.
 
 ## Running it
@@ -57,7 +67,7 @@ Requires `.env` (gitignored) with `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and
 | `streamlit_app.py` | Side-by-side comparison UI; streams all three agents |
 | `pages/2_Summary.py` | Runs the judge and charts the three indicators |
 | `single_agent.py` / `sub_agent.py` / `handoff_agent.py` | The architectures |
-| `judge.py` | LLM judge: per-script verdict + head-judge winner pick |
+| `judge.py` | Two-layer LLM judge: per-script scores + comparative winner pick |
 | `scoring.py` | Pure cost/latency/quality scoring over chat history |
 | `main.py` | CLI REPL for a single architecture |
 
