@@ -82,7 +82,9 @@ Tell-Show-Tell structural adherence together:
 {CRITERIA}
 
 Compare the candidates head to head. Pick the one that is most presentation-ready
-overall. Return the winning candidate's id exactly as it appears in its header, and
+overall and has compelling, evocative prose. Great demos leave the audience with an emotional
+attachment to the ideas presented and a clear sense of the product's transformative potential. 
+Return the winning candidate's id exactly as it appears in its header, and
 explain in 3-5 sentences why it beats the others -- cite specific quality and structure
 differences, not vague praise."""
 
